@@ -1,0 +1,6 @@
+[submodule "modules/Nuklear"]
+	path = modules/Nuklear
+	url = git@github.com:Immediate-Mode-UI/Nuklear.git
+[submodule "modules/SDL"]
+	path = modules/SDL
+	url = git@github.com:libsdl-org/SDL.git

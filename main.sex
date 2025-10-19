@@ -1,0 +1,48 @@
+(include SDL3/SDL.h)
+
+(include inttypes.h)
+(include stdbool.h)
+
+(struct settings
+  ((uint32-t border-x)
+   (uint32-t l r t b x y w h)
+   (uint32-t max-width max-height)
+   ((array (struct color
+             ((float r g b a)))
+           16) colors)
+   (int32-t selected-vertex)))
+
+(struct video
+  ((SDL-Window *window)
+   (SDL-Renderer *renderer)
+   (SDL-Texture *texture)))
+
+(struct nine-slice
+  ((float l r t b)
+   ((array uint16-t 54) indices)
+   ((struct vertex
+      ((float x y u v r g b a))
+      (attribute packed)))
+   ((array (struct vertex) 16) verts)))
+
+(struct state
+  ((settings settings)
+   (video video)
+   (nine-slice nine-slice)
+   (bool running)))
+
+(pub fn int main ()
+  (var state state)
+  (= state.settings.l 138)
+  (= state.settings.r 454)
+  (= state.settings.t 101)
+  (= state.settings.b 102)
+  (= state.settings.x 0)
+  (= state.settings.y 0)
+
+  (= state.running true)
+
+  (SDL-Init SDL-INIT-VIDEO)
+
+
+  (var SDL-Event e))
