@@ -1,38 +1,125 @@
 (include SDL3/SDL.h)
+(include SDL3/SDL_main.h)
 
-(include inttypes.h)
-(include stdbool.h)
+;;; Alsmost cheating
+(define NK_INCLUDE_FIXED_TYPES)
+(define NK_INCLUDE_STANDARD_IO)
+(define NK_INCLUDE_STANDARD_VARARGS)
+(define NK_INCLUDE_DEFAULT_ALLOCATOR)
+(define NK_INCLUDE_VERTEX_BUFFER_OUTPUT)
+(define NK_INCLUDE_FONT_BAKING)
+(define NK_INCLUDE_DEFAULT_FONT)
+(define NK_IMPLEMENTATION)
+(define NK_SDL3_RENDERER_IMPLEMENTATION)
+(define NK_INCLUDE_STANDARD_BOOL)
+(include Nuklear/nuklear.h)
+(include nuklear_sdl3_renderer.h)
+
+(struct color
+  ((r g b a float)))
 
 (struct settings
-  ((uint32-t border-x)
-   (uint32-t l r t b x y w h)
-   (uint32-t max-width max-height)
-   ((array (struct color
-             ((float r g b a)))
-           16) colors)
-   (int32-t selected-vertex)))
+  ((border-x u32)
+   (l r t b x y w h u32)
+   (max-width max-height u32)
+   (colors [struct color 16])
+   (selected-vertex i32)))
 
 (struct video
-  ((SDL-Window *window)
-   (SDL-Renderer *renderer)
-   (SDL-Texture *texture)))
+  ((window (* SDL-Window))
+   (renderer (* SDL-Renderer))
+   (texture  (* SDL-Texture))))
 
 (struct nine-slice
-  ((float l r t b)
-   ((array uint16-t 54) indices)
-   ((struct vertex
-      ((float x y u v r g b a))
-      (attribute packed)))
-   ((array (struct vertex) 16) verts)))
+  ((l r t b float)
+   (indices [u16 54])
+   (verts [(struct vertex
+             ((x y u v r g b a float))
+             (attribute packed)) 16])))
 
 (struct state
-  ((settings settings)
-   (video video)
-   (nine-slice nine-slice)
-   (bool running)))
+  ((settings (struct settings))
+   (video (struct video))
+   (nine-slice (struct nine-slice))
+   (nk-ctx (* struct nk-context))
+   (bg (struct nk-colorf))
+   (running bool)))
 
-(pub fn int main ()
-  (var state state)
+(defmacro (sdl-try call desc)
+  `(if (! ,call)
+       (begin
+        (SDL-Log "Oops")
+        (SDL-Log "Failed to %s: %s" ,desc (SDL-GetError))
+        (return SDL-APP-FAILURE))))
+
+(fn render ((state (* struct state))) int
+  (var now (const Uint64) (SDL-GetTicks))
+  (var r (* SDL-Renderer) state->video.renderer)
+  (SDL-SetRenderDrawColor r 0 0 0 SDL-ALPHA-OPAQUE)
+  (SDL-RenderClear r)
+
+  (nk-sdl-render NK-ANTI-ALIASING-ON)
+
+  (SDL-RenderPresent r)
+  (return 0))
+
+(fn draw-gui ((s (* struct state))) void
+  (if (nk-begin s->nk-ctx "Demo" (nk-rect 50 50 230 250)
+                (c-bit-or NK-WINDOW-BORDER NK-WINDOW-MOVABLE NK-WINDOW-SCALABLE NK-WINDOW-MINIMIZABLE NK-WINDOW-TITLE))
+      (begin
+       (enum (EASY HARD))
+       (var op (static i32) EASY)
+       (var prop (static i32) 20)
+       (nk-layout-row-static s->nk-ctx 30 80 1)
+       (if (nk-button-label s->nk-ctx "button")
+           (SDL-Log "Button pressed..."))
+       (nk-layout-row-dynamic s->nk-ctx 30 2)
+       (if (nk-option-label s->nk-ctx "easy" (== op EASY))
+           (= op EASY))
+       (if (nk-option-label s->nk-ctx "hard" (== op HARD))
+           (= op HARD))
+       (nk-layout-row-dynamic s->nk-ctx 25 1)
+       (nk-property-int s->nk-ctx "Compression:" 0 (& prop) 100 10 1)
+       (nk-layout-row-dynamic s->nk-ctx 20 1)
+       (nk-label s->nk-ctx "background:" NK-TEXT-LEFT)
+       (nk-layout-row-dynamic s->nk-ctx 25 1)
+       (if (nk-combo-begin-color s->nk-ctx (nk-rgb-cf s->bg) (nk-vec2 (nk-widget-width s->nk-ctx) 400))
+           (begin
+            (nk-layout-row-dynamic s->nk-ctx 120 1)
+            (= s->bg (nk-color-picker s->nk-ctx s->bg NK-RGB))
+            (nk-layout-row-dynamic s->nk-ctx 25 1)
+            (= s->bg.r (nk-propertyf s->nk-ctx "#R:" 0 s->bg.r 1.0f 0.01f 0.005f))
+            (= s->bg.g (nk-propertyf s->nk-ctx "#G:" 0 s->bg.g 1.0f 0.01f 0.005f))
+            (= s->bg.b (nk-propertyf s->nk-ctx "#B:" 0 s->bg.b 1.0f 0.01f 0.005f))
+            (= s->bg.a (nk-propertyf s->nk-ctx "#A:" 0 s->bg.a 1.0f 0.01f 0.005f))
+            (nk-combo-end s->nk-ctx)))))
+  (nk-end s->nk-ctx))
+
+
+(fn main-loop ((s (* struct state))) bool
+  (var e SDL-Event)
+  (nk-input-begin s->nk-ctx)
+  (while (SDL-PollEvent (& e))
+    (switch e.type
+            ((SDL-EVENT-QUIT)
+             (SDL-Log "Got Quit event, bye...")
+             (return false))
+            ((SDL-EVENT-KEY-DOWN)
+             (switch e.key.key
+                     ((SDLK-ESCAPE)
+                      (SDL-Log "Escape pressed, quitting. Bye...")
+                      (return false)))))
+    (nk-sdl-handle-event (& e)))
+  (nk-input-end s->nk-ctx)
+
+  (draw-gui s)
+
+  (render s)
+  (return true))
+
+(pub fn main () int
+  (SDL-Log "Starting 9 grid viewer")
+  (var state (struct state))
   (= state.settings.l 138)
   (= state.settings.r 454)
   (= state.settings.t 101)
@@ -40,9 +127,28 @@
   (= state.settings.x 0)
   (= state.settings.y 0)
 
+
+  (sdl-try (SDL-Init SDL-INIT-VIDEO) "initialize video")
+  (sdl-try (SDL-CreateWindowAndRenderer "9-grid" 800 600 0 (& state.video.window) (& state.video.renderer))
+           "create window/renderer")
+
+  ;; Nuklear initialization
+  (= state.nk-ctx (nk-sdl-init state.video.window state.video.renderer))
+  (= state.bg (cast #((= .r 0.10f)
+                      (= .g 0.18f)
+                      (= .b 0.24f)
+                      (= .a 1.0f))
+                    (struct nk-colorf)))
+  (begin
+   (var atlas (* struct nk-font-atlas))
+   (var config (struct nk-font-config) (nk-font-config 0))
+   (var font (* struct nk-font))
+   (nk-sdl-font-stash-begin (& atlas))
+   (= font (nk-font-atlas-add-default atlas 13 (& config)))
+   (nk-sdl-font-stash-end)
+   (nk-style-set-font state.nk-ctx (& font->handle)))
+
   (= state.running true)
-
-  (SDL-Init SDL-INIT-VIDEO)
-
-
-  (var SDL-Event e))
+  (while state.running
+    (= state.running (main-loop (& state))))
+  (return 0))
