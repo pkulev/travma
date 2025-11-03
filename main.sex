@@ -15,6 +15,9 @@
 (include Nuklear/nuklear.h)
 (include nuklear_sdl3_renderer.h)
 
+(define PROGNAME "travma")
+(define VERSION "0.1.0")
+
 (struct color
   ((r g b a float)))
 
@@ -78,7 +81,10 @@
 
 (fn draw-gui ((s (* struct state))) void
   (if (nk-begin s->nk-ctx "Menu" (nk-rect 50 50 300 400)
-                (c-bit-or NK-WINDOW-BORDER NK-WINDOW-MOVABLE NK-WINDOW-MINIMIZABLE NK-WINDOW-TITLE))
+                (c-bit-or NK-WINDOW-BORDER
+                          NK-WINDOW-MOVABLE
+                          NK-WINDOW-MINIMIZABLE
+                          NK-WINDOW-TITLE))
       (begin
        (labeled-slider "Left" 1 (& s->settings.l) s->settings.max-width 1)
        (labeled-slider "Right" 1 (& s->settings.r) s->settings.max-width 1)
@@ -121,8 +127,8 @@
   (render s)
   (return true))
 
-(pub fn main () int
-  (SDL-Log "Starting 9 grid viewer")
+(pub fn main ((argc int) (argv [const * char])) int
+  (SDL-Log "Starting %s v%s" PROGNAME VERSION)
   (var state (struct state))
   (= state.settings.l 138)
   (= state.settings.r 454)
@@ -136,7 +142,7 @@
   (= state.settings.max-height 1000)
 
   (sdl-try (SDL-Init SDL-INIT-VIDEO) "initialize video")
-  (sdl-try (SDL-CreateWindowAndRenderer "9-grid" 800 600 0 (& state.video.window) (& state.video.renderer))
+  (sdl-try (SDL-CreateWindowAndRenderer PROGNAME 800 600 0 (& state.video.window) (& state.video.renderer))
            "create window/renderer")
 
   ;; Nuklear initialization

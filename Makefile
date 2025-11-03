@@ -1,6 +1,6 @@
 SEX_C ?= sexc
 
-9grid: main.sex libSDL3.so
+travma: main.sex libSDL3.so
 	$(SEX_C) $^ -o $@ -- -L./ -lm -lSDL3 -I./modules/SDL/include -I./modules -Wl,-rpath='$$ORIGIN'
 
 libSDL3.so:
@@ -10,4 +10,4 @@ libSDL3.so:
 	cp -d ./modules/SDL/_build/libSDL3.so* ./
 
 clean:
-	rm -f 9grid libSDL3.so*
+	rm -f travma libSDL3.so*
