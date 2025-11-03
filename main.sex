@@ -30,7 +30,7 @@
    (renderer (* SDL-Renderer))
    (texture  (* SDL-Texture))))
 
-(struct nine-slice
+(struct nine-grid
   ((l r t b float)
    (indices [u16 54])
    (verts [(struct vertex
@@ -40,7 +40,7 @@
 (struct state
   ((settings (struct settings))
    (video (struct video))
-   (nine-slice (struct nine-slice))
+   (nine-grid (struct nine-grid))
    (nk-ctx (* struct nk-context))
    (bg (struct nk-colorf))
    (running bool)))
@@ -50,39 +50,44 @@
        (begin
         (SDL-Log "Oops")
         (SDL-Log "Failed to %s: %s" ,desc (SDL-GetError))
-        (return SDL-APP-FAILURE))))
+        (return 1))))
 
 (fn render ((state (* struct state))) int
   (var now (const Uint64) (SDL-GetTicks))
   (var r (* SDL-Renderer) state->video.renderer)
+  (var s (* struct settings) (& state->settings))
+
   (SDL-SetRenderDrawColor r 0 0 0 SDL-ALPHA-OPAQUE)
   (SDL-RenderClear r)
+
+  (SDL-SetRenderDrawColor r 128 64 255 SDL-ALPHA-OPAQUE)
+  (SDL-RenderLine state->video.renderer s->l 0.0f s->l s->max-height)
+  (SDL-RenderLine state->video.renderer s->r 0.0f s->r s->max-height)
+  (SDL-RenderLine state->video.renderer 0.0f s->t s->max-width s->t)
+  (SDL-RenderLine state->video.renderer 0.0f s->b s->max-width s->b)
 
   (nk-sdl-render NK-ANTI-ALIASING-ON)
 
   (SDL-RenderPresent r)
   (return 0))
 
+(defmacro (labeled-slider label . slider-args)
+  `((nk-layout-row-dynamic s->nk-ctx 25 2)
+    (nk-label s->nk-ctx ,label NK-TEXT-LEFT)
+    (nk-slider-int s->nk-ctx ,@slider-args)))
+
 (fn draw-gui ((s (* struct state))) void
-  (if (nk-begin s->nk-ctx "Demo" (nk-rect 50 50 230 250)
-                (c-bit-or NK-WINDOW-BORDER NK-WINDOW-MOVABLE NK-WINDOW-SCALABLE NK-WINDOW-MINIMIZABLE NK-WINDOW-TITLE))
+  (if (nk-begin s->nk-ctx "Menu" (nk-rect 50 50 300 400)
+                (c-bit-or NK-WINDOW-BORDER NK-WINDOW-MOVABLE NK-WINDOW-MINIMIZABLE NK-WINDOW-TITLE))
       (begin
-       (enum (EASY HARD))
-       (var op (static i32) EASY)
-       (var prop (static i32) 20)
-       (nk-layout-row-static s->nk-ctx 30 80 1)
-       (if (nk-button-label s->nk-ctx "button")
-           (SDL-Log "Button pressed..."))
-       (nk-layout-row-dynamic s->nk-ctx 30 2)
-       (if (nk-option-label s->nk-ctx "easy" (== op EASY))
-           (= op EASY))
-       (if (nk-option-label s->nk-ctx "hard" (== op HARD))
-           (= op HARD))
-       (nk-layout-row-dynamic s->nk-ctx 25 1)
-       (nk-property-int s->nk-ctx "Compression:" 0 (& prop) 100 10 1)
-       (nk-layout-row-dynamic s->nk-ctx 20 1)
-       (nk-label s->nk-ctx "background:" NK-TEXT-LEFT)
-       (nk-layout-row-dynamic s->nk-ctx 25 1)
+       (labeled-slider "Left" 1 (& s->settings.l) s->settings.max-width 1)
+       (labeled-slider "Right" 1 (& s->settings.r) s->settings.max-width 1)
+       (labeled-slider "Top" 1 (& s->settings.t) s->settings.max-height 1)
+       (labeled-slider "Bottom" 1 (& s->settings.b) s->settings.max-height 1)
+       (labeled-slider "X" 1 (& s->settings.x) 800 1)
+       (labeled-slider "Y" 1 (& s->settings.y) 600 1)
+       (labeled-slider "Width" 1 (& s->settings.w) 800 1)
+       (labeled-slider "Height" 1 (& s->settings.h) 600 1)
        (if (nk-combo-begin-color s->nk-ctx (nk-rgb-cf s->bg) (nk-vec2 (nk-widget-width s->nk-ctx) 400))
            (begin
             (nk-layout-row-dynamic s->nk-ctx 120 1)
@@ -94,7 +99,6 @@
             (= s->bg.a (nk-propertyf s->nk-ctx "#A:" 0 s->bg.a 1.0f 0.01f 0.005f))
             (nk-combo-end s->nk-ctx)))))
   (nk-end s->nk-ctx))
-
 
 (fn main-loop ((s (* struct state))) bool
   (var e SDL-Event)
@@ -126,7 +130,10 @@
   (= state.settings.b 102)
   (= state.settings.x 0)
   (= state.settings.y 0)
-
+  (= state.settings.w 100)
+  (= state.settings.h 100)
+  (= state.settings.max-width 1000)
+  (= state.settings.max-height 1000)
 
   (sdl-try (SDL-Init SDL-INIT-VIDEO) "initialize video")
   (sdl-try (SDL-CreateWindowAndRenderer "9-grid" 800 600 0 (& state.video.window) (& state.video.renderer))
@@ -151,4 +158,5 @@
   (= state.running true)
   (while state.running
     (= state.running (main-loop (& state))))
+  (nk-sdl-shutdown)
   (return 0))
