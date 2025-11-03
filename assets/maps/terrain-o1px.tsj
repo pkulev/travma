@@ -1,0 +1,16 @@
+{ "columns":3,
+ "image":"terrain-o1px.png",
+ "imageheight":576,
+ "imagewidth":384,
+ "margin":0,
+ "name":"terrain-o1px",
+ "spacing":0,
+ "tilecount":12,
+ "tiledversion":"1.11.2",
+ "tileheight":144,
+ "tilerendersize":"grid",
+ "tilewidth":128,
+ "transparentcolor":"#ff00ff",
+ "type":"tileset",
+ "version":"1.10"
+}
