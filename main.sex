@@ -15,6 +15,8 @@
 (include Nuklear/nuklear.h)
 (include nuklear_sdl3_renderer.h)
 
+(import tiled)
+
 (define PROGNAME "travma")
 (define VERSION "0.1.0")
 
@@ -129,6 +131,10 @@
 
 (pub fn main ((argc int) (argv [const * char])) int
   (SDL-Log "Starting %s v%s" PROGNAME VERSION)
+
+  (if (== (test-tiled-thing "assets/maps/map1.json") -1)
+      (return 1))
+
   (var state (struct state))
   (= state.settings.l 138)
   (= state.settings.r 454)

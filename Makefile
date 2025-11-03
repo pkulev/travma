@@ -1,7 +1,16 @@
+CC ?= cc
 SEX_C ?= sexc
 
-travma: main.sex libSDL3.so
-	$(SEX_C) $^ -o $@ -- -L./ -lm -lSDL3 -I./modules/SDL/include -I./modules -Wl,-rpath='$$ORIGIN'
+MODULES = tiled main
+OBJ = $(MODULES:%=%.o)
+
+all: travma
+
+%.o: %.sex
+	$(SEX_C) $< -c -o $@ -- -I./modules/SDL/include -I./modules
+
+travma: $(OBJ) libSDL3.so
+	$(CC) $^ -o $@ -L./ -lm -lSDL3 -I./modules/SDL/include -I./modules -Wl,-rpath='$$ORIGIN'
 
 libSDL3.so:
 	mkdir -p ./modules/SDL/_build
@@ -10,4 +19,4 @@ libSDL3.so:
 	cp -d ./modules/SDL/_build/libSDL3.so* ./
 
 clean:
-	rm -f travma libSDL3.so*
+	rm -f travma $(OBJ) libSDL3.so*

@@ -1,0 +1,62 @@
+(define CUTE_TILED_NO_EXTERNAL_TILESET_WARNING)
+(define CUTE_TILED_IMPLEMENTATION)
+(include cute_tiled.h)
+
+(include SDL3/SDL.h)
+(include SDL3/SDL_main.h)
+
+
+(pub fn test-tiled-thing ((map-file (* char))) int
+  (SDL-Log "Loading %s" map-file)
+
+  ;; Map stuff
+  (var map (* cute-tiled-map-t) (cute-tiled-load-map-from-file map-file NULL))
+  (if (== map NULL)
+      (begin (SDL-Log "Unable to read the map: [%s:%i] %s"
+                      map-file
+                      cute-tiled-error-line
+                      cute-tiled-error-reason)
+             (return -1)))
+
+  (if (!= NULL map->class_.ptr)
+      (SDL-Log "Map class: %s" map->class_.ptr))
+  (SDL-Log "Map size: %ix%i" map->width map->height)
+  (SDL-Log "Hex side length: %i" map->hexsidelength)
+  (SDL-Log "Stagger axis: %s" map->staggeraxis.ptr)
+  (SDL-Log "Stagger index: %s" map->staggerindex.ptr)
+  (SDL-Log "\n")
+
+  ;; Tilesets
+  (var tileset (* cute-tiled-tileset-t) map->tilesets)
+  ;; NOTE: if tileset is not embedded, only firstgid and source are available!
+  (while tileset
+    (SDL-Log "First GID: %d, path: %s" tileset->firstgid tileset->source.ptr)
+    (= tileset tileset->next))
+
+  ;; Layers
+  (var layer (* cute-tiled-layer-t) map->layers)
+  (while layer
+    (if (!= NULL layer->class_.ptr)
+        (SDL-Log "Layer class: %s" layer->class_.ptr))
+    (SDL-Log "Layer name: %s" layer->name.ptr)
+    (SDL-Log "Layer opacity: %f" layer->opacity)
+    (SDL-Log "Layer type: %s" layer->type.ptr)
+    (SDL-Log "Layer image: %s" layer->image.ptr)
+
+    (if (== 0 (strcmp layer->name.ptr "ground"))
+        (begin
+         (SDL-Log "Layer data count/height/width: %i/%i/%i"
+                  layer->data-count
+                  layer->height
+                  layer->width)
+         (for (var row int 0) (< row layer->height) (++ row)
+              (for (var col int 0) (< col layer->width) (++ col)
+                   (SDL-Log "%d:%d = %d" row col
+                            [layer->data (+ (* row layer->height) col)])))))
+
+    (SDL-Log "\n")
+
+    (= layer layer->next))
+
+  (cute-tiled-free-map map)
+  (return 0))
