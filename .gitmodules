@@ -4,3 +4,6 @@
 [submodule "modules/SDL"]
 	path = modules/SDL
 	url = git@github.com:libsdl-org/SDL.git
+[submodule "modules/sfsexp"]
+	path = modules/sfsexp
+	url = git@github.com:mjsottile/sfsexp.git
