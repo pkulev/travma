@@ -25,7 +25,7 @@ travma: $(OBJ) libSDL3.$(LIBEXT)
 libSDL3.$(LIBEXT):
 	mkdir -p ./modules/SDL/_build
 	cmake -B ./modules/SDL/_build ./modules/SDL/
-	cmake --build ./modules/SDL/_build -j8
+	cmake --build ./modules/SDL/_build -j$(shell nproc)
 	$(CPLIB) ./modules/SDL/_build/libSDL3\.$(LIBEXT)* ./
 
 clean:
